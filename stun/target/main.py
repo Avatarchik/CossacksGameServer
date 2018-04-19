@@ -4,6 +4,7 @@ import redis
 import socket
 import struct
 import logging
+import concurrent.futures
 
 SERVER_HOST = ''
 SERVER_PORT = 3708
@@ -25,37 +26,42 @@ def parse_packet(packet):
     return tag.decode('utf-8'), version[0], player_id, access_key
 
 
+def worker(storage, notify, keep_alive_interval, packet, remote):
+    try:
+        host, port = remote
+        tag, version, player_id, access_key = parse_packet(packet)
+        remote_info = {
+            'host': host,
+            'port': port,
+            'version': version,
+            'access_key': access_key
+        }
+        if tag != 'CSHP':
+            logging.warning(f'unknown packet {packet}')
+        if version == 1:
+            if storage.set(
+                    player_id,
+                    json.dumps(remote_info),
+                    px=keep_alive_interval):
+                logging.debug(f'player_id {player_id} ({host},{port})')
+                notify.sendto(b'ok', remote)
+            else:
+                logging.warning(f'player_id {player_id} is not saved')
+        else:
+            logging.warning('version %d is not supported', version)
+
+    except struct.error:
+        logging.error(f'invalid packet {packet}')
+
+
 def get_handler(storage, keep_alive_interval):
     keep_alive_interval = int(keep_alive_interval * 1.5)
     notify = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
 
     def handle_packet(packet, remote):
-        try:
-            host, port = remote
-            tag, version, player_id, access_key = parse_packet(packet)
-            remote_info = {
-                'host': host,
-                'port': port,
-                'version': version,
-                'access_key': access_key
-            }
-            if tag != 'CSHP':
-                logging.warning(f'unknown packet {packet}')
-            if version == 1:
-                if storage.set(
-                        player_id,
-                        json.dumps(remote_info),
-                        px=keep_alive_interval):
-                    logging.debug(f'player_id {player_id} ({host},{port})')
-                    notify.sendto(b'ok', remote)
-                else:
-                    logging.warning(f'player_id {player_id} is not saved')
-            else:
-                logging.warning('version %d is not supported', version)
-
-        except struct.error:
-            logging.error(f'invalid packet {packet}')
-
+        executor.submit(worker, storage, notify,
+                        keep_alive_interval, packet, remote)
     return handle_packet
 
 
