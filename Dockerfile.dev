@@ -1,0 +1,22 @@
+# This is a image of cossacks game server
+FROM debian:stretch-slim
+EXPOSE 34001
+
+ENV rootpath /app
+ENV streamer /GSC-Streamer
+ENV server /GSC-Server
+ENV scs /SimpleCossacksServer
+
+RUN apt-get update -q --fix-missing && \
+    apt-get -y upgrade && \
+    apt-get -y install build-essential
+
+ADD target/ $rootpath/
+
+WORKDIR $rootpath
+
+# Install perl modules via cpanm:
+RUN ./bin/cpanm --notest .$streamer/ .$server/ .$scs/
+
+# Run server in test mode:
+ENTRYPOINT ["./entrypoint-dev.sh"]

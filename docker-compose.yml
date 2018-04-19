@@ -1,0 +1,32 @@
+version: '2'
+services:
+  irc:
+    image: geekduck/ngircd
+    command: "--server-name ${HOST_NAME}"
+    ports:
+      - "6667:6667"
+  redis:
+    image: redis
+    ports:
+      - "127.0.0.1:6379:6379"
+  stun:
+    build:
+      context: ./stun
+      dockerfile: Dockerfile
+    ports:
+      - "3708:3708/udp"
+  cossacks:
+    build:
+      context: ./
+      dockerfile: Dockerfile.dev
+    environment:
+      - HOST_NAME=${HOST_NAME}
+    volumes:
+      - "./volume/logs:/cossacks/SimpleCossacksServer/logs"
+      - "./volume/share:/cossacks/SimpleCossacksServer/share"
+    ports:
+      - "34001:34001"
+    depends_on:
+      - irc
+      - redis
+      - stun
