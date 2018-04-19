@@ -1,3 +1,4 @@
+import os
 import json
 import redis
 import socket
@@ -24,7 +25,7 @@ def parse_packet(packet):
     return tag.decode('utf-8'), version[0], player_id, access_key
 
 
-def get_handler(storage):
+def get_handler(storage, keep_alive_interval):
     def handle_packet(packet, remote):
         try:
             host, port = remote
@@ -38,7 +39,10 @@ def get_handler(storage):
             if tag != 'CSHP':
                 logging.warning(f'unknown packet {packet}')
             if version == 1:
-                if storage.set(player_id, json.dumps(remote_info), px=450):
+                if storage.set(
+                        player_id,
+                        json.dumps(remote_info),
+                        px=keep_alive_interval):
                     logging.debug(f'player_id {player_id} ({host},{port})')
                 else:
                     logging.warning(f'player_id {player_id} is not saved')
@@ -58,9 +62,10 @@ def main():
     except socket.gaierror:
         storage_host = 'localhost'
     storage = redis.StrictRedis(host=storage_host, port=6379, db=0)
-    handle_packet = get_handler(storage)
     server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     server.bind((SERVER_HOST, SERVER_PORT))
+    handle_packet = get_handler(
+        storage, int(os.environ.get('UDP_KEEP_ALIVE_INTERVAL', '1000')))
 
     while True:
         packet, remote_addr = server.recvfrom(512)

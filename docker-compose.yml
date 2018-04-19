@@ -21,6 +21,7 @@ services:
       dockerfile: Dockerfile.dev
     environment:
       - HOST_NAME=${HOST_NAME}
+      - UDP_KEEP_ALIVE_INTERVAL=${UDP_KEEP_ALIVE_INTERVAL}
     volumes:
       - "./volume/logs:/cossacks/SimpleCossacksServer/logs"
       - "./volume/share:/cossacks/SimpleCossacksServer/share"
