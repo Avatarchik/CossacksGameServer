@@ -27,6 +27,7 @@ def parse_packet(packet):
 
 def get_handler(storage, keep_alive_interval):
     keep_alive_interval = int(keep_alive_interval * 1.5)
+    notify = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     def handle_packet(packet, remote):
         try:
@@ -46,6 +47,7 @@ def get_handler(storage, keep_alive_interval):
                         json.dumps(remote_info),
                         px=keep_alive_interval):
                     logging.debug(f'player_id {player_id} ({host},{port})')
+                    notify.sendto(b'ok', remote)
                 else:
                     logging.warning(f'player_id {player_id} is not saved')
             else:
