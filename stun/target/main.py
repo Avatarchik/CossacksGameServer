@@ -26,6 +26,8 @@ def parse_packet(packet):
 
 
 def get_handler(storage, keep_alive_interval):
+    keep_alive_interval = int(keep_alive_interval * 1.5)
+
     def handle_packet(packet, remote):
         try:
             host, port = remote
