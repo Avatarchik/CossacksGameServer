@@ -57,7 +57,7 @@ def worker(storage, notify, keep_alive_interval, packet, remote):
 def get_handler(storage, keep_alive_interval):
     keep_alive_interval = int(keep_alive_interval * 1.5)
     notify = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
+    executor = concurrent.futures.ThreadPoolExecutor()
 
     def handle_packet(packet, remote):
         executor.submit(worker, storage, notify,
