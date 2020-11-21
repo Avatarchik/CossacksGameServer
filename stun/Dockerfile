@@ -6,6 +6,8 @@ ENV rootpath /app
 RUN apk update && \
     apk add python3
 
+RUN python3 -m ensurepip
+
 ADD target/ $rootpath/
 
 WORKDIR $rootpath
